@@ -1,0 +1,352 @@
+-- SCRIPT AIMBOT LOCK - ARRUMADO TUDO!
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = workspace
+local VirtualUser = game:GetService("VirtualUser")
+local UIS = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+
+local player = Players.LocalPlayer
+local PlayerGui = player.PlayerGui
+local Camera = Workspace.CurrentCamera
+
+-- CONFIG
+local settings = {
+    Enabled = false,
+    TargetName = "Ninguém",
+    TargetPart = "Head",
+    FpsBoost = false
+}
+
+local SelectedPlayer = nil
+local Gui = nil
+local MainBtn = nil
+local Window = nil
+local ActivateBtn = nil
+local Scrolling = nil
+local PartBtn = nil
+local FpsBtn = nil
+
+-- ===== FUNÇÃO DE CRIAR TUDO =====
+function CriarUI()
+    if PlayerGui:FindFirstChild("LockAimUI") then return end
+
+    Gui = Instance.new("ScreenGui")
+    Gui.Name = "LockAimUI"
+    Gui.Parent = PlayerGui
+    Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    Gui.ResetOnSpawn = false
+
+    -- BOTÃO PRINCIPAL
+    MainBtn = Instance.new("TextButton")
+    MainBtn.Size = UDim2.new(0, 80, 0, 30)
+    MainBtn.Position = UDim2.new(0, 10, 0, 10)
+    MainBtn.BackgroundColor3 = Color3.fromRGB(10,10,10)
+    MainBtn.Text = "LOCK: OFF"
+    MainBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    MainBtn.Font = Enum.Font.GothamBold
+    MainBtn.TextSize = 12
+    MainBtn.Active = true
+    MainBtn.Draggable = true
+    MainBtn.Parent = Gui
+
+    local stroke = Instance.new("UIStroke", MainBtn)
+    stroke.Color = Color3.fromRGB(255, 0, 0)
+    stroke.Thickness = 1
+    Instance.new("UICorner", MainBtn).CornerRadius = UDim.new(0,4)
+
+    -- JANELA PEQUENA
+    Window = Instance.new("Frame", Gui)
+    Window.Size = UDim2.new(0, 180, 0, 280)
+    Window.Position = UDim2.new(0, 100, 0, 10)
+    Window.BackgroundColor3 = Color3.fromRGB(15,15,15)
+    Window.Visible = false
+    Window.Active = true
+    Window.Draggable = true
+
+    local stroke2 = Instance.new("UIStroke", Window)
+    stroke2.Color = Color3.fromRGB(255, 0, 0)
+    stroke2.Thickness = 1
+    Instance.new("UICorner", Window).CornerRadius = UDim.new(0,4)
+
+    -- TITULO
+    local Title = Instance.new("TextLabel", Window)
+    Title.Size = UDim2.new(1, -10, 0, 20)
+    Title.Position = UDim2.new(0, 5, 0, 3)
+    Title.BackgroundTransparency = 1
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = "MENU"
+    Title.TextColor3 = Color3.fromRGB(255,255,255)
+    Title.TextSize = 12
+
+    -- BOTÃO DE ESCOLHER PARTE DO CORPO
+    PartBtn = Instance.new("TextButton", Window)
+    PartBtn.Size = UDim2.new(1, -10, 0, 25)
+    PartBtn.Position = UDim2.new(0.05, 0, 0, 28)
+    PartBtn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    PartBtn.Text = "MIRAR: CABEÇA"
+    PartBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    PartBtn.Font = Enum.Font.GothamBold
+    PartBtn.TextSize = 10
+    Instance.new("UICorner", PartBtn).CornerRadius = UDim.new(0,3)
+
+    -- BOTÃO DE FPS BOOST
+    FpsBtn = Instance.new("TextButton", Window)
+    FpsBtn.Size = UDim2.new(1, -10, 0, 25)
+    FpsBtn.Position = UDim2.new(0.05, 0, 0, 58)
+    FpsBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+    FpsBtn.Text = "FPS: NORMAL"
+    FpsBtn.TextColor3 = Color3.new(1,1,1)
+    FpsBtn.Font = Enum.Font.GothamBold
+    FpsBtn.TextSize = 10
+    Instance.new("UICorner", FpsBtn).CornerRadius = UDim.new(0,3)
+
+    -- LISTA
+    Scrolling = Instance.new("ScrollingFrame", Window)
+    Scrolling.Size = UDim2.new(1, -10, 1, -110)
+    Scrolling.Position = UDim2.new(0, 5, 0, 90)
+    Scrolling.BackgroundTransparency = 1
+    Scrolling.BorderSizePixel = 0
+    Scrolling.ScrollBarThickness = 3
+    Scrolling.CanvasSize = UDim2.new(0,0,0,0)
+
+    local Layout = Instance.new("UIListLayout", Scrolling)
+    Layout.Padding = UDim.new(0, 3)
+    Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    Layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    -- BOTÃO DE ATIVAR LOCK
+    ActivateBtn = Instance.new("TextButton", Window)
+    ActivateBtn.Size = UDim2.new(1, -10, 0, 30)
+    ActivateBtn.Position = UDim2.new(0.05, 0, 0.88, 0)
+    ActivateBtn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    ActivateBtn.Text = "ATIVAR"
+    ActivateBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    ActivateBtn.Font = Enum.Font.GothamBold
+    ActivateBtn.TextSize = 11
+    Instance.new("UICorner", ActivateBtn).CornerRadius = UDim.new(0,3)
+
+    -- CONECTAR BOTÕES
+    MainBtn.MouseButton1Click:Connect(function()
+        Window.Visible = not Window.Visible
+        if Window.Visible then
+            UpdateList()
+        end
+    end)
+
+    -- BOTÃO DE TROCAR PARTE DO CORPO
+    PartBtn.MouseButton1Click:Connect(function()
+        if settings.TargetPart == "Head" then
+            settings.TargetPart = "Torso"
+            PartBtn.Text = "MIRAR: PEITO"
+        elseif settings.TargetPart == "Torso" then
+            settings.TargetPart = "LeftFoot"
+            PartBtn.Text = "MIRAR: PÉ"
+        else
+            settings.TargetPart = "Head"
+            PartBtn.Text = "MIRAR: CABEÇA"
+        end
+    end)
+
+    -- SISTEMA DE FPS BOOST
+    FpsBtn.MouseButton1Click:Connect(function()
+        settings.FpsBoost = not settings.FpsBoost
+        
+        if settings.FpsBoost then
+            FpsBtn.Text = "FPS: 120+"
+            FpsBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+            
+            pcall(function()
+                settings().Rendering.FramerateManagerEnabled = true
+                settings().Rendering.MaxParallelTasks = 2048
+                settings().Rendering.QualityLevel = 1
+                settings().Rendering.ShadowsEnabled = false
+                settings().Rendering.AntialiasingMode = Enum.AntialiasingMode.Disabled
+                settings().Rendering.TextureQuality = Enum.TextureQuality.Low
+                
+                Lighting.GlobalShadows = false
+                Lighting.Brightness = 1
+                Lighting.FogEnd = 100000
+                
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") then
+                        v.Enabled = false
+                    end
+                end
+            end)
+        else
+            FpsBtn.Text = "FPS: NORMAL"
+            FpsBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+            
+            pcall(function()
+                settings().Rendering.QualityLevel = Enum.QualityLevel.LevelAutomatic
+                settings().Rendering.ShadowsEnabled = true
+                settings().Rendering.AntialiasingMode = Enum.AntialiasingMode.MSAA2x
+                Lighting.GlobalShadows = true
+            end)
+        end
+    end)
+
+    ActivateBtn.MouseButton1Click:Connect(function()
+        settings.Enabled = not settings.Enabled
+        
+        if settings.Enabled then
+            ActivateBtn.Text = "DESATIVAR"
+            ActivateBtn.BackgroundColor3 = Color3.fromRGB(100,0,0)
+            MainBtn.BackgroundColor3 = Color3.fromRGB(100,0,0)
+            if SelectedPlayer then
+                MainBtn.Text = "ALVO: " .. SelectedPlayer.Name
+            else
+                MainBtn.Text = "LOCK: ON"
+            end
+        else
+            ActivateBtn.Text = "ATIVAR"
+            ActivateBtn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+            MainBtn.BackgroundColor3 = Color3.fromRGB(10,10,10)
+            MainBtn.Text = "LOCK: OFF"
+        end
+    end)
+end
+
+-- FUNÇÃO PARA ATUALIZAR LISTA
+function UpdateList()
+    if not Scrolling then return end
+    for _, child in pairs(Scrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local y = 0
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= player then
+            local Btn = Instance.new("TextButton")
+            Btn.Size = UDim2.new(1, 0, 0, 25)
+            Btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+            Btn.Text = plr.Name
+            Btn.TextColor3 = Color3.fromRGB(255,255,255)
+            Btn.Font = Enum.Font.GothamBold
+            Btn.TextSize = 10
+            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,3)
+            
+            Btn.Parent = Scrolling
+            
+            Btn.MouseButton1Click:Connect(function()
+                SelectedPlayer = plr
+                settings.TargetName = plr.Name
+                if settings.Enabled then
+                    MainBtn.Text = "ALVO: " .. plr.Name
+                else
+                    MainBtn.Text = "ALVO: " .. plr.Name
+                end
+            end)
+            
+            y = y + 28
+        end
+    end
+    Scrolling.CanvasSize = UDim2.new(0,0,0,y)
+end
+
+-- SISTEMA ANTI-APAGAR
+spawn(function()
+    while wait(2) do
+        if not PlayerGui:FindFirstChild("LockAimUI") then
+            CriarUI()
+        end
+    end
+end)
+
+CriarUI()
+
+-- =============================================
+-- 🔒 AIMBOT FORTE - MIRA NA PARTE ESCOLHIDA 🔒
+-- =============================================
+RunService.Heartbeat:Connect(function()
+    if settings.Enabled and SelectedPlayer ~= nil then
+        pcall(function()
+            if SelectedPlayer.Character then
+                
+                local Alvo = SelectedPlayer.Character:FindFirstChild(settings.TargetPart)
+                
+                if not Alvo then
+                    if settings.TargetPart == "LeftFoot" then
+                        Alvo = SelectedPlayer.Character:FindFirstChild("RightFoot") or SelectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    else
+                        Alvo = SelectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    end
+                end
+
+                if Alvo then
+                    local NovaPosicao = CFrame.new(Camera.CFrame.Position, Alvo.Position)
+                    Camera.CFrame = Camera.CFrame:Lerp(NovaPosicao, 0.6)
+                    VirtualUser:ClickMouseButton1()
+                end
+            end
+        end)
+    end
+end)
+
+Players.PlayerAdded:Connect(UpdateList)
+Players.PlayerRemoving:Connect(UpdateList)
+
+-- =============================================
+-- ✨ ESP NAME PEQUENO E BONITO - NÃO SOME MAIS ✨
+-- =============================================
+local Billboards = {}
+local Tempo = 0
+
+spawn(function()
+    while wait() do
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= player then
+                local character = plr.Character
+                if character then
+                    local HumanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                    if HumanoidRootPart and not Billboards[plr.Name] then
+                        
+                        local Billboard = Instance.new("BillboardGui")
+                        Billboard.Size = UDim2.new(0, 70, 0, 20)
+                        Billboard.StudsOffset = Vector3.new(0, 2.8, 0)
+                        Billboard.AlwaysOnTop = true
+                        Billboard.Parent = HumanoidRootPart
+                        
+                        local Nome = Instance.new("TextLabel", Billboard)
+                        Nome.Size = UDim2.new(1, 0, 1, 0)
+                        Nome.BackgroundTransparency = 1
+                        Nome.Text = plr.Name
+                        Nome.TextScaled = true
+                        Nome.Font = Enum.Font.GothamSemibold
+                        Nome.TextSize = 14
+                        Nome.TextColor3 = Color3.new(1,1,1)
+                        
+                        local Borda = Instance.new("UIStroke", Nome)
+                        Borda.Color = Color3.new(0,0,0)
+                        Borda.Thickness = 1.5
+                        
+                        Billboards[plr.Name] = Nome
+                    end
+                end
+            end
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function(dt)
+    Tempo = Tempo + dt
+    local Cor = Color3.fromHSV(Tempo % 1, 1, 1)
+    for _, NomeTxt in pairs(Billboards) do
+        if NomeTxt then NomeTxt.TextColor3 = Cor end
+    end
+end)
+
+-- =============================================
+-- ⚡️ ZERO DELAY ⚡️
+-- =============================================
+spawn(function()
+    while wait() do
+        pcall(function()
+            UIS.MouseButton1Click:Connect(function() end)
+            UIS.TouchTap:Connect(function() end)
+        end)
+    end
+end)
+
+print("Script Carregado - TUDO ARRUMADO!")
